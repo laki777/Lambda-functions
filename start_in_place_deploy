@@ -1,0 +1,63 @@
+from __future__ import print_function
+import boto3
+import json
+import os
+
+def getDeploymentId (event):
+    print('Get deployment_id')
+    message = event['Records'][0]['Sns']['Message']
+    parsed_message = json.loads(message)
+    deployment_id = parsed_message['deploymentId']
+    print('Deployment Id: ' + deployment_id)
+    return deployment_id
+
+def getApplicationName (deployment_id):
+    print('Get Application name')
+    boto3client = boto3.client('codedeploy')
+    deployment = boto3client.get_deployment(deploymentId=deployment_id)
+    application_name = deployment['deploymentInfo']['applicationName']
+    print('Application Name: ' + application_name)
+    return application_name
+
+def getBucketName (deployment_id):
+    print('Get bucket name')
+    boto3client = boto3.client('codedeploy')
+    deployment = boto3client.get_deployment(deploymentId=deployment_id)
+    bucket = deployment['deploymentInfo']['revision']['s3Location']['bucket']
+    print('Bucket name: ' + bucket)
+    return bucket
+
+def getApplicationVersion (deployment_id):
+    print('Get Application Version')
+    boto3client = boto3.client('codedeploy')
+    deployment = boto3client.get_deployment(deploymentId=deployment_id)
+    application_version = deployment['deploymentInfo']['revision']['s3Location']['key']
+    print('Application Version (key): ' +  application_version)
+    return application_version
+
+def createAdminDeployment (application_name,application_version,bucket):
+    print('Starting Admin deployment')
+
+    client = boto3.client('codedeploy')
+    response = client.create_deployment(
+        applicationName=application_name,
+        deploymentGroupName='Background_Service',
+        revision={
+            'revisionType': 'S3',
+            's3Location': {
+                'bucket': bucket,
+                'key': application_version,
+                'bundleType': 'tgz',
+            }
+        }
+    )
+    print('Admin deployment started')
+    print(response)
+
+def handler(event, context):
+    print('Loading sisAdminDeploy function')
+    deployment_id = getDeploymentId(event)
+    application_name = getApplicationName(deployment_id)
+    application_version = getApplicationVersion(deployment_id)
+    bucket = getBucketName(deployment_id)
+    createAdminDeployment(application_name,application_version,bucket)
