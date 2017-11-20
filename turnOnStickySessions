@@ -1,0 +1,35 @@
+from __future__ import print_function
+import boto3
+import os
+
+def targetGroupArn (event):
+    SNS = str(event)
+    if (SNS.find('Web_App_Staging') != -1):
+        print('Loading Web_App_Staging')
+        TargetGroupArn='arn:aws:elasticloadbalancing:e...............'
+    elif (SNS.find('Web_App_Production') != -1):
+        print('Loading Web_App_Production')
+        TargetGroupArn='arn:aws:elasticloadbalancing:e...............'
+    else:
+        print('ERROR')
+    print('TargetGroupArn: ' + TargetGroupArn)
+    return TargetGroupArn
+
+def turnOffStickySessions (TargetGroupArn):
+    client = boto3.client('elbv2')
+    response = client.modify_target_group_attributes(
+        TargetGroupArn=TargetGroupArn,
+        Attributes=[
+            {
+                'Key': 'stickiness.enabled',
+                'Value': 'true',
+            },
+        ]
+    )
+    print('Sticky Sessions enabled')
+    print(response)
+
+def handler(event, context):
+    print('Loading turnOnStickySessions function')
+    TargetGroupArn = targetGroupArn(event)
+    turnOffStickySessions(TargetGroupArn)
