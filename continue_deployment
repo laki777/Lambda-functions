@@ -1,0 +1,26 @@
+from __future__ import print_function
+import boto3
+import json
+import os
+
+def getDeploymentId (event):
+    print('Get deployment_id')
+    message = event['Records'][0]['Sns']['Message']
+    parsed_message = json.loads(message)
+    deployment_id = parsed_message['deploymentId']
+    print('Deployment Id: ' + deployment_id)
+    return deployment_id
+
+def continueDeploy (deployment_id):
+    print('Starting Continue Deploy')
+    client = boto3.client('codedeploy')
+    response = client.continue_deployment(
+        deploymentId=deployment_id
+    )
+    print('Starting Deploy completed')
+    print(response)
+
+def handler(event, context):
+    print('Loading continueDeploy function')
+    message = getDeploymentId(event)
+    continueDeploy(message)
