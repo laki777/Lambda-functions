@@ -1,0 +1,43 @@
+from __future__ import print_function
+import boto3
+import json
+import os
+
+def getDeploymentId (event):
+    print('Get deployment_id')
+    message = event['Records'][0]['Sns']['Message']
+    parsed_message = json.loads(message)
+    deployment_id = parsed_message['deploymentId']
+    print('Deployment Id: ' + deployment_id)
+    return deployment_id
+
+def getAutoScalingGroupName (deployment_id):
+    print('Get Auto Scaling Group Name')
+    boto3client = boto3.client('codedeploy')
+    deployment = boto3client.get_deployment(deploymentId=deployment_id)
+    autoscalinggroup_name = deployment['deploymentInfo']['targetInstances']['autoScalingGroups']
+    autoscalinggroup_name = str(autoscalinggroup_name[0])
+    print('Auto Scaling Group Name: ' + autoscalinggroup_name)
+    return autoscalinggroup_name
+
+def scheduledAction (autoscalinggroup_name,ScheduledActionName,Recurrence,MinSize,MaxSize,DesiredCapacity):
+    print('Create Scheduled Action ' + ScheduledActionName)
+    boto3client = boto3.client('autoscaling')
+    response = boto3client.put_scheduled_update_group_action(
+        AutoScalingGroupName=autoscalinggroup_name,
+        ScheduledActionName=ScheduledActionName,
+        Recurrence=Recurrence,
+        MinSize=MinSize,
+        MaxSize=MaxSize,
+        DesiredCapacity=DesiredCapacity
+    )
+    print('Scheduled Action ' + ScheduledActionName + 'Created')
+    print(response)
+
+def handler(event, context):
+    print('Create Scheduled Action')
+    deployment_id = getDeploymentId(event)
+    autoscalinggroup_name = getAutoScalingGroupName(deployment_id)
+    if (autoscalinggroup_name.find('Web_Staging') != -1):
+        scheduledAction(autoscalinggroup_name,"Web_Staging",'45 0 * * *',9,18,9)
+    print('Create Scheduled Action'')
